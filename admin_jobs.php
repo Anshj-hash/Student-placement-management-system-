@@ -1,0 +1,15 @@
+<?php
+require_once 'config.php';require_admin();$error='';
+if($_SERVER['REQUEST_METHOD']==='POST'){verify_csrf();$title=trim($_POST['title']??'');$company=(int)($_POST['company_id']??0);$location=trim($_POST['location']??'');$type=$_POST['job_type']??'Full-time';$salary=trim($_POST['salary']??'');$min=(float)($_POST['min_cgpa']??0);$deadline=$_POST['deadline']?:null;$description=trim($_POST['description']??'');
+ if($title===''||$company<1||$min<0||$min>10||$description===''){$error='Please complete all required fields with valid values.';}else{$stmt=$pdo->prepare("INSERT INTO jobs(company_id,title,description,location,job_type,salary,min_cgpa,deadline) VALUES(?,?,?,?,?,?,?,?)");$stmt->execute([$company,$title,$description,$location,$type,$salary,$min,$deadline]);flash('Job opening published.');header('Location: admin_jobs.php');exit;}}
+$companies=$pdo->query("SELECT id,name FROM companies ORDER BY name")->fetchAll();$jobs=$pdo->query("SELECT j.*,c.name company_name FROM jobs j JOIN companies c ON c.id=j.company_id ORDER BY j.created_at DESC")->fetchAll();$pageTitle='Manage jobs';require 'includes/header.php';
+?>
+<div class="section-head"><div><div class="eyebrow">Admin tools</div><h1>Job openings</h1></div></div>
+<?php if($error):?><div class="alert error"><?=e($error)?></div><?php endif;?>
+<div class="panel"><h2>Publish a job</h2><?php if(!$companies):?><div class="notice">Add a company first from <a href="admin_companies.php">Manage companies</a>.</div><?php else:?><form method="post"><input type="hidden" name="csrf_token" value="<?=e(csrf_token())?>">
+<div class="row"><div class="field"><label>Job title</label><input name="title" required></div><div class="field"><label>Company</label><select name="company_id" required><?php foreach($companies as $c):?><option value="<?=$c['id']?>"><?=e($c['name'])?></option><?php endforeach;?></select></div></div>
+<div class="row"><div class="field"><label>Location</label><input name="location" placeholder="e.g. Mohali / Remote"></div><div class="field"><label>Job type</label><select name="job_type"><option>Full-time</option><option>Internship</option><option>Part-time</option></select></div></div>
+<div class="row"><div class="field"><label>Salary / stipend</label><input name="salary"></div><div class="field"><label>Minimum CGPA</label><input type="number" name="min_cgpa" min="0" max="10" step=".01" value="0" required></div></div>
+<div class="field"><label>Application deadline</label><input type="date" name="deadline"></div><div class="field"><label>Job description</label><textarea name="description" required></textarea></div><button class="btn">Publish job</button></form><?php endif;?></div>
+<div class="section-head"><h2>Published jobs</h2></div><div class="table-wrap"><table><thead><tr><th>Role</th><th>Company</th><th>Type</th><th>Min CGPA</th><th>Status</th></tr></thead><tbody><?php foreach($jobs as $j):?><tr><td><?=e($j['title'])?></td><td><?=e($j['company_name'])?></td><td><?=e($j['job_type'])?></td><td><?=e((string)$j['min_cgpa'])?></td><td><?=e($j['status'])?></td></tr><?php endforeach;?></tbody></table></div>
+<?php require 'includes/footer.php'; ?>
